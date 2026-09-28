@@ -43,9 +43,11 @@ python .github/bandwidth-reviewer/review.py <owner>/<repo> <pr-number> --dry-run
 
 ### 3. Set up the GitHub Action
 
-1. Create an IAM user (or role) whose only permission is `bedrock:InvokeModel`, and make an access key for it.
+1. Get a Bedrock credential, either:
+   - **Bedrock API key (simplest):** Bedrock console → **API keys** → **Generate short-term API key**. It only works for Bedrock and expires within 12 hours, so regenerate it before each demo. Or:
+   - **IAM access key** for a user or role whose only permission is `bedrock:InvokeModel`.
 2. In the repo: **Settings → Secrets and variables → Actions**
-   - Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+   - Secrets: `AWS_BEARER_TOKEN_BEDROCK` (API key), or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
    - Variables (optional): `AWS_REGION` (default `us-west-2`), `MODEL_ID`
 3. The workflow file must be on the default branch (it is, on `main`).
 

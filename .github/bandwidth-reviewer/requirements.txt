@@ -1,2 +1,2 @@
-boto3>=1.35
+boto3>=1.39  # 1.39+ reads Bedrock API keys from AWS_BEARER_TOKEN_BEDROCK
 requests>=2.32
