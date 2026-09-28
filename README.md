@@ -62,6 +62,7 @@ The planted bugs, so you know what a good review should catch:
 | File | Bug |
 | --- | --- |
 | `app/pricing.py` | Segment count changed from rounding up to rounding down, so long messages are undercharged |
+| `tests/test_pricing.py` | The two segment tests were edited to match the bug, so the branch's tests still pass |
 | `app/bulk_send.py` | Batching loop stops one short, so the last recipient is silently skipped |
 | `app/bulk_send.py` | Unknown customer IDs crash with `AttributeError` instead of a clear error |
 | `app/bulk_send.py` | Hard-coded API token in source |
