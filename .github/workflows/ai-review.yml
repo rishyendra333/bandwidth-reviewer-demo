@@ -1,0 +1,54 @@
+name: AI review
+
+# Runs when someone with write access comments "@bandwidth-reviewer review" on a PR.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '@bandwidth-reviewer review') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMENT_URL: repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions
+    steps:
+      - name: React 👀
+        run: gh api "$COMMENT_URL" -f content=eyes --silent
+
+      # Checks out the default branch, not the PR, so PR code never runs here.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -r .github/bandwidth-reviewer/requirements.txt
+
+      - name: Review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          MODEL_ID: ${{ vars.MODEL_ID || 'openai.gpt-oss-120b-1:0' }}
+        run: python .github/bandwidth-reviewer/review.py
+
+      - name: React 🚀
+        if: success()
+        run: gh api "$COMMENT_URL" -f content=rocket --silent
+
+      - name: React 😕
+        if: failure()
+        run: gh api "$COMMENT_URL" -f content=confused --silent
