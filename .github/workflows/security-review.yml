@@ -1,0 +1,63 @@
+name: Security AI review
+
+# Runs when someone with write access comments
+# "@bandwidth-security-reviewer review" on a PR.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '@bandwidth-security-reviewer review') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMENT_URL: repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions
+
+    steps:
+      - name: React 👀
+        run: gh api "$COMMENT_URL" -f content=eyes --silent
+
+      # Check out the default branch rather than PR code.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -r .github/security-reviewer/requirements.txt
+
+      - name: Security Review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
+          # Reuse the same Bedrock credentials as the general reviewer.
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          MODEL_ID: ${{ vars.MODEL_ID || 'openai.gpt-oss-120b-1:0' }}
+
+        run: python .github/security-reviewer/review.py
+
+      - name: React 🚀
+        if: success()
+        run: gh api "$COMMENT_URL" -f content=rocket --silent
+
+      - name: React 😕
+        if: failure()
+        run: gh api "$COMMENT_URL" -f content=confused --silent
