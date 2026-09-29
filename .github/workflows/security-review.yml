@@ -1,7 +1,7 @@
 name: Security AI review
 
-# Runs when someone with write access comments
-# "@bandwidth-security-reviewer review" on a PR.
+# Runs when a repo collaborator comments:
+# @bandwidth-security-reviewer review
 on:
   issue_comment:
     types: [created]
@@ -29,7 +29,8 @@ jobs:
       - name: React 👀
         run: gh api "$COMMENT_URL" -f content=eyes --silent
 
-      # Check out the default branch rather than PR code.
+      # Review code from the trusted default branch.
+      # The reviewer fetches PR data through the GitHub API.
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -37,20 +38,24 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: pip install -r .github/security-reviewer/requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r .github/security-reviewer/requirements.txt
 
       - name: Security Review
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.issue.number }}
 
-          # Reuse the same Bedrock credentials as the general reviewer.
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
           MODEL_ID: ${{ vars.MODEL_ID || 'openai.gpt-oss-120b-1:0' }}
+
+          MIN_CONFIDENCE: "0.75"
+          MAX_COMMENTS: "10"
 
         run: python .github/security-reviewer/review.py
 
