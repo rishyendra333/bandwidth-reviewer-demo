@@ -1,0 +1,66 @@
+name: Test Gap AI review
+
+# Runs when a repo collaborator comments:
+# @bandwidth-test-reviewer review
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '@bandwidth-test-reviewer review') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMENT_URL: repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions
+
+    steps:
+      - name: React 👀
+        run: gh api "$COMMENT_URL" -f content=eyes --silent
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r .github/test-reviewer/requirements.txt
+
+      - name: Test Gap Review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          MODEL_ID: ${{ vars.MODEL_ID || 'openai.gpt-oss-120b-1:0' }}
+
+          MIN_CONFIDENCE: "0.70"
+          MAX_COMMENTS: "10"
+
+        run: python .github/test-reviewer/review.py
+
+      - name: React 🚀
+        if: success()
+        run: gh api "$COMMENT_URL" -f content=rocket --silent
+
+      - name: React 😕
+        if: failure()
+        run: gh api "$COMMENT_URL" -f content=confused --silent
