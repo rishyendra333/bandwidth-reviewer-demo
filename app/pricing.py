@@ -6,8 +6,6 @@ scripts) is sent as UCS-2: 70 characters, or 67 per segment when split.
 Customers pay per segment.
 """
 
-import math
-
 GSM7_SINGLE, GSM7_MULTI = 160, 153
 UCS2_SINGLE, UCS2_MULTI = 70, 67
 
@@ -26,7 +24,7 @@ def segment_count(text: str) -> int:
     single, multi = (GSM7_SINGLE, GSM7_MULTI) if is_gsm7(text) else (UCS2_SINGLE, UCS2_MULTI)
     if len(text) <= single:
         return 1
-    return math.ceil(len(text) / multi)
+    return len(text) // multi
 
 
 def message_cost(text: str, plan: str) -> float:
