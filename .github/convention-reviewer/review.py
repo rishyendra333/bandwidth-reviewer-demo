@@ -145,6 +145,7 @@ DO NOT REPORT
 - Missing docstrings, unless the surrounding code consistently documents the same kind
   of public item.
 - Praise or general advice.
+- Do not report hard coded API tokens, as these are considered a security issue rather than a convention issue.
 
 RULES
 - Only comment on lines marked "+" (added) in the diff. For function-level problems,
